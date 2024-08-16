@@ -1,6 +1,30 @@
-const app = require('express')();
+const express = require('express')
+const morgan = require('morgan')
+const helmet = require('helmet')
+const cors = require('cors')
+const pino = require('pino')
+const { Server } = require('socket.io')
+const http = require('http')
 
-const server = require('http').createServer(app);
+const app = express()
+const logger = pino()
+const server = http.createServer(app)
+
+app.use(helmet)
+app.use(cors())
+app.use(morgan('common'))
+app.use(express.json())
+app.use(express.urlencoded({extended: true}))
+
+app.get('/', (req, res) => {
+    res.send('home')
+})
+
+// const io = new Server(server, { 
+//     cors: { 
+//         origin: "*"
+//     },
+// })
 
 const io = require('socket.io')(server, {
     cors: {
@@ -11,10 +35,14 @@ const io = require('socket.io')(server, {
     }
 });
 
-io.on("connection", (socket) => {
-    // console.log('socket is active:', socket)
-    console.log('socket is active', socket.id)
 
+io.on("connection", (socket) => {
+    console.log(`User connected: ${socket.id}`);
+
+    socket.on('send_message', (data) => {
+        console.log(data);
+        socket.broadcast.emit('receive_message', data)
+    })
 
     socket.on("chat", (payload) => {
         console.log('payload:', payload);
@@ -22,6 +50,6 @@ io.on("connection", (socket) => {
     })
 })
 
-server.listen(3000, () =>  {
-    console.log('server running on port 3000');
-}) 
+server.listen(3000, () => {
+    console.log('connected');
+})
